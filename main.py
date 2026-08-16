@@ -179,6 +179,40 @@ class SrconPlugin(Star):
             umo = f"{prefix}{group_id}"
         await self.context.send_message(umo, MessageChain().message(text))
 
+    # ──────────── 群聊 → 游戏转发 ────────────
+
+    @filter.event_message_type(EventMessageType.GROUP_MESSAGE)
+    async def _forward_group_chat(self, event: AstrMessageEvent):
+        gid = str(event.get_group_id() or "")
+        if gid:
+            self._session_cache[gid] = event.unified_msg_origin
+        if not bool(_cfg(self.config, "group_to_game_enable", True)):
+            return
+        # 转发模式：all=全部群消息 | wake=仅@机器人/z唤醒触发 | off=关闭
+        mode = str(_cfg(self.config, "group_chat_mode", "all") or "all").lower()
+        if mode == "off":
+            return
+        if mode == "wake" and not event.is_at_or_wake_command:
+            return
+        text = (event.message_str or "").strip()
+        if not text:
+            return
+        low = text.lower()
+        if low.startswith("srcon") or low.startswith("/srcon"):
+            return
+        content = text
+        try:
+            sender = event.get_sender_name() or str(event.get_sender_id())
+        except Exception:  # noqa: BLE001
+            sender = str(event.get_sender_id())
+        fmt = str(_cfg(self.config, "group_chat_format", "[QQ] {player} › {msg}") or "")
+        formatted = fmt.format(player=sender, msg=content) if fmt else f"[QQ] {sender} › {content}"
+        try:
+            n = await self.ws.broadcast_group_chat(formatted)
+            logger.info(f"[SRCon] 群聊→游戏 已广播到 {n} 台服务器: {formatted}")
+        except Exception as exc:  # noqa: BLE001
+            logger.error(f"[SRCon] 群聊→游戏 广播失败: {exc}")
+
     # ──────────── 白名单 ────────────
 
     def _is_admin(self, user_id) -> bool:

@@ -186,5 +186,17 @@ class SrconWSServer:
                                    "server": server_id, "cmd": command, "reason": str(exc)})
             return False, f"发送失败: {exc}"
 
+    async def broadcast_group_chat(self, text: str) -> int:
+        """向所有在线服务器广播群聊消息（游戏内显示）。返回发送数。"""
+        payload = {"type": "group_chat", "msg": text}
+        n = 0
+        for sid, sv in list(self._servers.items()):
+            try:
+                await sv["ws"].send(json.dumps(payload, ensure_ascii=False))
+                n += 1
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(f"[SRCon] 群聊广播到 {sid} 失败: {exc}")
+        return n
+
     def is_connected(self, server_id: str) -> bool:
         return server_id in self._servers
