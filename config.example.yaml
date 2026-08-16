@@ -5,7 +5,7 @@ ws_host: "0.0.0.0"
 ws_port: 8765
 
 # 连接令牌：Mod 端环境变量 SRCON_TOKEN 必须与此一致
-token: "srcon_zains_change_me"
+token: "CHANGE_ME_TO_RANDOM_STRING"
 
 # 全局管理员 QQ（可配置任何人的白名单）
 admin_qq: ""

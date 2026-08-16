@@ -1,3 +1,6 @@
 __pycache__/
 *.pyc
 .venv/
+
+# 真实配置不入库
+config.yaml
