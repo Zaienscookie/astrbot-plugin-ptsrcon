@@ -1,7 +1,7 @@
 # AstrBot 插件 ptsrcon — 群服互通服务端
 
 AstrBot 侧「QQ群 ↔ Minecraft 服务器」互通服务端：
-- **WebSocket 服务端**（默认 `0.0.0.0:8765`）：接收 Forge Mod 客户端连接并认证
+- **WebSocket 服务端**（默认 `0.0.0.0:8766`）：接收 Forge Mod 客户端连接并认证
 - **游戏事件转发**：chat/join/leave/death/achievement/server_start/server_stop → 绑定 QQ 群
 - **远程命令**：群里发 `@bot srcon <服务器> <命令>` 执行游戏内命令
 - **白名单**：按 QQ 号 + 可操作服务器列表控制，管理员放行
@@ -27,7 +27,7 @@ srcon s1 give Steve diamond 64
 ## 配置项
 | 键 | 默认 | 说明 |
 |----|------|------|
-| `ws_host` / `ws_port` | `0.0.0.0` / `8765` | WebSocket 监听地址 |
+| `ws_host` / `ws_port` | `0.0.0.0` / `8766`（注意 8765 可能被 mineastr 等插件占用） | WebSocket 监听地址 |
 | `token` | 空 | 认证 token，与 Mod 的 `SRCON_TOKEN` 一致 |
 | `admin_qq` | 空 | 管理员 QQ，无视白名单 |
 | `whitelist` | `{}` | `{"QQ号": ["s1", "s2"]}`，`*` 通配全部服务器 |

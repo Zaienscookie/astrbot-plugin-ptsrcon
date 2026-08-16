@@ -9,6 +9,7 @@
 - GET  /                前端页面（index.html）
 """
 import logging
+from .logpatch import patch_logger
 import time
 from pathlib import Path
 from typing import Optional
@@ -16,7 +17,7 @@ from typing import Optional
 import yaml
 from aiohttp import web
 
-logger = logging.getLogger("astrbot.plugin.ptsrcon.webui")
+logger = patch_logger('astrbot.plugin.ptsrcon.webui')
 
 
 class SrconWebUI:
@@ -154,7 +155,7 @@ class SrconWebUI:
         mask = lambda v: (str(v)[:4] + "****") if v else ""
         return web.json_response({
             "ws_host": cfg.get("ws_host", "0.0.0.0"),
-            "ws_port": cfg.get("ws_port", 8765),
+            "ws_port": cfg.get("ws_port", 8766),
             "token_masked": mask(cfg.get("token", "")),
             "webui_token_masked": mask(cfg.get("webui_token", "")),
             "admin_qq": cfg.get("admin_qq", "") or "",

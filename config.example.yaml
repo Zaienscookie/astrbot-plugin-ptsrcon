@@ -2,7 +2,7 @@
 
 # WebSocket 服务端监听配置（Forge Mod 连接这里）
 ws_host: "0.0.0.0"
-ws_port: 8765
+ws_port: 8766
 
 # 连接令牌：Mod 端环境变量 SRCON_TOKEN 必须与此一致
 token: "CHANGE_ME_TO_RANDOM_STRING"

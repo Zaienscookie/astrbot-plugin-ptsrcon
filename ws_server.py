@@ -6,11 +6,12 @@ import json
 import time
 from collections import deque
 import logging
+from .logpatch import patch_logger
 import time
 
 import websockets
 
-logger = logging.getLogger("astrbot.plugin.ptsrcon.ws")
+logger = patch_logger('astrbot.plugin.ptsrcon.ws')
 
 
 class SrconWSServer:
@@ -60,6 +61,20 @@ class SrconWSServer:
         logger.info("SRCon WebSocket 服务端已停止")
 
     async def _handler(self, ws) -> None:
+        try:
+            await self._handler_inner(ws)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            import traceback as _tb
+            try:
+                with open("/tmp/ws_err.log", "a", encoding="utf-8") as _f:
+                    _f.write(_tb.format_exc())
+            except Exception:
+                pass
+            logger.exception("[SRCon] 连接处理异常(已捕获)")
+
+    async def _handler_inner(self, ws) -> None:
         """处理单个 Mod 连接。"""
         peer = getattr(ws, "remote_address", None)
         server_id = None

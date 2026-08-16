@@ -6,6 +6,7 @@
 """
 import asyncio
 import logging
+from .logpatch import patch_logger
 import time
 from pathlib import Path
 
@@ -18,7 +19,7 @@ from astrbot.core.star.filter.event_message_type import EventMessageType
 from .ws_server import SrconWSServer
 from .webui import SrconWebUI
 
-logger = logging.getLogger("astrbot.plugin.ptsrcon")
+logger = patch_logger('astrbot.plugin.ptsrcon')
 
 
 def _cfg(config, key, default=""):
@@ -45,7 +46,7 @@ class SrconPlugin(Star):
                     logger.warning(f"[SRCon] config.yaml 解析失败: {exc}")
         self.ws = SrconWSServer(
             host=str(_cfg(self.config, "ws_host", "0.0.0.0")),
-            port=int(_cfg(self.config, "ws_port", 8765) or 8765),
+            port=int(_cfg(self.config, "ws_port", 8766) or 8766),
             token=str(_cfg(self.config, "token", "")),
             on_event=self._on_ws_event,
         )
@@ -71,7 +72,7 @@ class SrconPlugin(Star):
 
     async def initialize(self):
         self._task = asyncio.create_task(self._ws_runner(), name="ptsrcon-ws-server")
-        port = int(_cfg(self.config, "ws_port", 8765) or 8765)
+        port = int(_cfg(self.config, "ws_port", 8766) or 8766)
         logger.info(f"[SRCon] 插件初始化完成，WebSocket 服务端监听 :{port}")
         if self.webui:
             self._webui_task = asyncio.create_task(self._run_webui(), name="ptsrcon-webui")
