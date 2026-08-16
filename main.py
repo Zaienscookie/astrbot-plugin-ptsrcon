@@ -188,6 +188,16 @@ class SrconPlugin(Star):
         gid = str(event.get_group_id() or "")
         if gid:
             self._session_cache[gid] = event.unified_msg_origin
+
+        # 群→游戏白名单：只允许 forward_groups 中配置的群将消息转发到游戏
+        fg = _cfg(self.config, "forward_groups", {}) or {}
+        allowed_groups: set[str] = set()
+        for groups in fg.values():
+            if groups:
+                allowed_groups.update(str(g) for g in groups)
+        if gid and allowed_groups and gid not in allowed_groups:
+            return
+
         if not bool(_cfg(self.config, "group_to_game_enable", True)):
             return
         # 转发模式：all=全部群消息 | wake=仅@机器人/z唤醒触发 | off=关闭
