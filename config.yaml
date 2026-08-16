@@ -1,0 +1,38 @@
+# ============ 群服互通 SRCon 插件配置 ============
+
+# WebSocket 服务端监听配置（Forge Mod 连接这里）
+ws_host: "0.0.0.0"
+ws_port: 8765
+
+# 连接令牌：Mod 端环境变量 SRCON_TOKEN 必须与此一致
+token: "srcon_zains_change_me"
+
+# 全局管理员 QQ（可配置任何人的白名单）
+admin_qq: ""
+
+# 白名单：QQ号 -> 可操作的服务器列表（"*" 表示全部服务器）
+# 不在列表中的 QQ 无法使用 srcon 命令
+whitelist:
+  "10001": ["*"]
+
+# 事件转发：服务器ID -> 要转发到的群号列表
+# 游戏内聊天/进出服/死亡/成就事件会转发到这些群
+forward_groups:
+  "s1": ["251972336"]
+
+# 兜底转发：如果 forward_groups 没有配置某个服务器的群，
+# 且这个列表非空，则转发到这里的群（逗号分隔群号）
+forward_all_groups: ""
+
+# 未匹配到群时的默认 session 前缀（QQ 平台一般是 aiocqhttp:group_message:）
+# 插件会自动学习实际的群 session，一般无需修改
+session_prefix: "aiocqhttp:group_message:"
+
+# 转发哪些类型的事件（逗号分隔：chat,join,leave,death,achievement,server_start,server_stop）
+forward_event_types: "chat,join,leave,death,achievement,server_start,server_stop"
+
+# 转发时是否带上服务器名前缀，如 "[生存服]"
+forward_with_server_prefix: true
+
+# 聊天转发格式（可选变量：{server_name} {player} {msg}）
+chat_format: "{player} › {msg}"

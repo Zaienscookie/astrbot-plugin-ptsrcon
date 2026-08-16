@@ -1,0 +1,11 @@
+name: ptsrcon
+display_name: 群服互通 SRCon
+desc: QQ群 ↔ Minecraft 服务器双向互通：srcon 命令远程执行、游戏内聊天/进出服/死亡事件转发到群。
+help: |
+  发送「srcon list」查看已连接的服务器；
+  发送「srcon <服务器名> <命令>」在对应服务器执行命令（如 srcon s1 say 你好）；
+  游戏内聊天、玩家进出、死亡事件会自动转发到绑定群。
+version: v1.0.0
+author: zains
+repo:
+astrbot_version: ">=4.16,<5"
