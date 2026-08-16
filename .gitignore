@@ -4,3 +4,12 @@ __pycache__/
 
 # 真实配置不入库
 config.yaml
+
+# 运行产物
+config.yaml.bak
+
+# 运行产物
+data/
+
+# 运行产物
+temp/
