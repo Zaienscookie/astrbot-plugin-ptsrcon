@@ -175,7 +175,9 @@ class SrconPlugin(Star):
     async def _send_to_group(self, group_id: str, text: str):
         umo = self._session_cache.get(str(group_id))
         if not umo:
-            prefix = str(_cfg(self.config, "session_prefix", "aiocqhttp:group_message:"))
+            prefix = str(_cfg(self.config, "session_prefix", "aiocqhttp:GroupMessage:"))
+            # 兼容旧配置的小写 group_message：MessageType 枚举值是 GroupMessage（驼峰）
+            prefix = prefix.replace("group_message:", "GroupMessage:")
             umo = f"{prefix}{group_id}"
         await self.context.send_message(umo, MessageChain().message(text))
 
