@@ -3,6 +3,8 @@
 """
 import asyncio
 import json
+import time
+from collections import deque
 import logging
 import time
 
@@ -22,6 +24,7 @@ class SrconWSServer:
         self.on_event = on_event
         self._server = None
         self._servers: dict[str, dict] = {}  # server_id -> {"ws": ws, "name": str, "connected_at": float}
+        self.event_log: deque[dict] = deque(maxlen=300)  # 最近事件环形缓冲（供 WebUI 展示）
 
     @property
     def servers(self) -> dict[str, dict]:
@@ -96,6 +99,7 @@ class SrconWSServer:
                                 "connected_at": time.time(),
                             }
                     msg["server"] = msg.get("server") or server_id
+                    self.event_log.append({"ts": time.time(), "origin": "server", **dict(msg)})
                     if self.on_event:
                         try:
                             await self.on_event(dict(msg))
@@ -108,13 +112,16 @@ class SrconWSServer:
         finally:
             if server_id and server_id in self._servers:
                 sv = self._servers.pop(server_id, None)
+                if sv:
+                    stop_msg = {
+                        "type": "server_stop",
+                        "server": server_id,
+                        "server_name": sv["name"],
+                    }
+                    self.event_log.append({"ts": time.time(), "origin": "server", **stop_msg})
                 if sv and self.on_event:
                     try:
-                        await self.on_event({
-                            "type": "server_stop",
-                            "server": server_id,
-                            "server_name": sv["name"],
-                        })
+                        await self.on_event(stop_msg)
                     except Exception:
                         pass
                 logger.info(f"[SRCon] 服务器 [{server_id}] 已断开")
@@ -147,14 +154,21 @@ class SrconWSServer:
         """向指定服务器发送命令。返回 (成功?, 提示信息)。"""
         sv = self._servers.get(server_id)
         if sv is None:
+            self.event_log.append({"ts": time.time(), "origin": "web", "type": "command_failed",
+                                   "server": server_id, "cmd": command,
+                                   "reason": "服务器未连接"})
             return False, f"服务器 [{server_id}] 未连接（可用 srcon list 查看）"
         payload: dict = {"type": "command", "cmd": command}
         if ack_id:
             payload["ack_id"] = ack_id
         try:
             await sv["ws"].send(json.dumps(payload, ensure_ascii=False))
+            self.event_log.append({"ts": time.time(), "origin": "web", "type": "command",
+                                   "server": server_id, "cmd": command})
             return True, f"已发送至 [{server_id}]：/{command}"
         except Exception as exc:  # noqa: BLE001
+            self.event_log.append({"ts": time.time(), "origin": "web", "type": "command_failed",
+                                   "server": server_id, "cmd": command, "reason": str(exc)})
             return False, f"发送失败: {exc}"
 
     def is_connected(self, server_id: str) -> bool:

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SRCon 管理面板</title>
+<style>
+  :root {
+    --bg: #0f1117; --panel: #171a23; --border: #262b38; --text: #dbe2f0;
+    --muted: #7c869e; --accent: #4f8cff; --ok: #3ecf72; --down: #ff5f6e;
+    --code-bg: #0b0d13; --warn: #f5b64c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font: 14px/1.6 "PingFang SC","Microsoft YaHei",sans-serif; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 20px; }
+  header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  header h1 { font-size: 20px; letter-spacing: .5px; }
+  .badge { padding: 3px 12px; border-radius: 20px; font-size: 12px; border: 1px solid var(--border); }
+  .badge.ok { color: var(--ok); border-color: rgba(62,207,114,.4); background: rgba(62,207,114,.08); }
+  .badge.down { color: var(--down); border-color: rgba(255,95,110,.4); background: rgba(255,95,110,.08); }
+  .spacer { flex: 1; }
+  button { background: var(--accent); color: #fff; border: 0; padding: 7px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+  button:hover { filter: brightness(1.1); }
+  button.ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+  button.danger { background: var(--down); }
+  input, select { background: var(--code-bg); border: 1px solid var(--border); color: var(--text); padding: 8px 10px; border-radius: 8px; font-size: 13px; outline: none; }
+  input:focus, select:focus { border-color: var(--accent); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .card h2 { font-size: 14px; color: var(--muted); font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .svr { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; }
+  .svr .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+  .svr.on .dot { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+  .svr.off .dot { background: var(--down); }
+  .svr .sid { font-family: monospace; color: var(--accent); margin-right: 8px; }
+  .cmd-line { display: flex; gap: 8px; margin-bottom: 10px; }
+  .cmd-line select { flex: 0 0 120px; }
+  .cmd-line input { flex: 1; font-family: monospace; }
+  #cmdOut { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px; min-height: 64px; font-family: monospace; font-size: 12px; white-space: pre-wrap; word-break: break-all; color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; }
+  .wl-add { display: flex; gap: 8px; margin-bottom: 10px; }
+  .wl-add input { flex: 0 0 140px; }
+  .wl-add .sv { flex: 1; }
+  #logs { max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px; }
+  .log-line { padding: 4px 6px; border-bottom: 1px dashed var(--border); display: flex; gap: 8px; }
+  .log-line .t { color: var(--muted); flex: 0 0 70px; }
+  .log-line .tag { flex: 0 0 90px; color: var(--accent); }
+  .log-line .txt { word-break: break-all; }
+  .tip { color: var(--muted); font-size: 12px; margin-top: 8px; }
+  #login { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 99; }
+  #login .box { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 28px; width: 320px; }
+  #login h2 { margin-bottom: 16px; font-size: 17px; }
+  #login input { width: 100%; margin-bottom: 10px; }
+  #loginErr { color: var(--down); font-size: 12px; min-height: 18px; }
+</style>
+</head>
+<body>
+<div id="login">
+  <div class="box">
+    <h2>🔐 SRCon 管理面板</h2>
+    <input id="tok" type="password" placeholder="访问令牌 (webui_token)">
+    <button id="loginBtn" style="width:100%">进入</button>
+    <div id="loginErr"></div>
+  </div>
+</div>
+
+<div class="wrap" id="main" style="display:none">
+  <header>
+    <h1>📡 SRCon 管理面板</h1>
+    <span class="badge ok" id="wsBadge">WS 监听中</span>
+    <span class="badge" id="svrBadge">0 台服务器</span>
+    <span class="spacer"></span>
+    <button class="ghost" onclick="refresh()">刷新</button>
+    <button class="ghost" onclick="logout()">退出</button>
+  </header>
+
+  <div class="grid">
+    <div class="card">
+      <h2>🖥️ 服务器</h2>
+      <div id="svrList"><div class="tip">暂无数据，点击刷新</div></div>
+    </div>
+
+    <div class="card">
+      <h2>⌨️ 命令执行</h2>
+      <div class="cmd-line">
+        <select id="cmdSvr"></select>
+        <input id="cmdIn" placeholder="例如：say 大家好 / give Steve diamond 64" onkeydown="if(event.key==='Enter')runCmd()">
+        <button onclick="runCmd()">执行</button>
+      </div>
+      <div id="cmdOut">等待执行命令…</div>
+      <div class="tip">命令以 / 开头可省略，例如 say 测试</div>
+    </div>
+
+    <div class="card">
+      <h2>👥 白名单</h2>
+      <div class="wl-add">
+        <input id="wlQq" placeholder="QQ 号">
+        <input class="sv" id="wlSvr" placeholder="服务器（逗号分隔，* 全部）" value="*">
+        <button onclick="addWl()">添加</button>
+      </div>
+      <table>
+        <thead><tr><th>QQ</th><th>可操作服务器</th><th></th></tr></thead>
+        <tbody id="wlBody"></tbody>
+      </table>
+      <div class="tip">管理员不高兴，手改 config.yaml 也行，改完会热生效</div>
+    </div>
+
+    <div class="card">
+      <h2>📜 事件日志 <span style="color:var(--muted);font-weight:400" id="logCount"></span></h2>
+      <div id="logs"><div class="tip">暂无日志</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const TOKEN_KEY = "srcon_token";
+let token = localStorage.getItem(TOKEN_KEY) || "";
+let servers = [];
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, {
+    ...opts,
+    headers: { "x-srcon-token": token, ...(opts.headers || {}) },
+  });
+  if (res.status === 401) { showLogin(); throw new Error("unauthorized"); }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || res.statusText);
+  return data;
+}
+
+function showLogin() { document.getElementById("login").style.display = "flex"; document.getElementById("main").style.display = "none"; }
+function hideLogin() { document.getElementById("login").style.display = "none"; document.getElementById("main").style.display = "block"; }
+
+document.getElementById("loginBtn").onclick = async () => {
+  token = document.getElementById("tok").value.trim();
+  localStorage.setItem(TOKEN_KEY, token);
+  try {
+    await api("/api/status");
+    hideLogin(); refresh();
+  } catch (e) {
+    document.getElementById("loginErr").textContent = "令牌无效或服务未就绪";
+  }
+};
+function logout() { localStorage.removeItem(TOKEN_KEY); token = ""; showLogin(); }
+
+function renderServers(s) {
+  servers = s;
+  const el = document.getElementById("svrList");
+  const sel = document.getElementById("cmdSvr");
+  document.getElementById("svrBadge").textContent = s.length + " 台服务器";
+  if (!s.length) { el.innerHTML = '<div class="tip">没有已连接的服务器。Mod 端上线后会自动出现</div>'; sel.innerHTML = '<option value="">（无服务器）</option>'; return; }
+  el.innerHTML = s.map(x => `
+    <div class="svr ${x.connected ? 'on' : 'off'}">
+      <span><span class="dot"></span><span class="sid">${x.id}</span>${x.name}</span>
+      <span style="color:${x.connected ? 'var(--ok)' : 'var(--down)'}">${x.connected ? '在线' : '离线'}</span>
+    </div>`).join("");
+  sel.innerHTML = s.map(x => `<option value="${x.id}">${x.id} · ${x.name}</option>`).join("");
+}
+
+async function refresh() {
+  try {
+    const d = await api("/api/status");
+    renderServers(d.servers);
+    document.getElementById("wsBadge").textContent = d.ws_listening ? "WS 监听中" : "WS 未启动";
+    document.getElementById("wsBadge").className = "badge " + (d.ws_listening ? "ok" : "down");
+  } catch (e) { /* 忽略瞬时错误 */ }
+}
+
+async function runCmd() {
+  const svr = document.getElementById("cmdSvr").value;
+  const cmd = document.getElementById("cmdIn").value.trim();
+  const out = document.getElementById("cmdOut");
+  if (!svr) { out.textContent = "❌ 请先选择服务器"; return; }
+  if (!cmd) { out.textContent = "❌ 请输入命令"; return; }
+  out.textContent = "⏳ 执行中: /" + cmd + " @" + svr + " …";
+  try {
+    const d = await api("/api/command", { method: "POST", body: JSON.stringify({ server: svr, command: cmd }) });
+    out.textContent = (d.ok ? "✅ " : "❌ ") + d.message;
+  } catch (e) { out.textContent = "❌ " + e.message; }
+}
+
+async function renderWhitelist() {
+  try {
+    const d = await api("/api/whitelist");
+    const wl = d.whitelist || {};
+    const body = document.getElementById("wlBody");
+    const qqs = Object.keys(wl);
+    if (!qqs.length) { body.innerHTML = '<tr><td colspan="3" class="tip">暂无白名单条目</td></tr>'; return; }
+    body.innerHTML = qqs.map(qq => `
+      <tr>
+        <td>${qq}${String(d.admin_qq) === String(qq) ? ' <span style="color:var(--warn)">(管理员)</span>' : ''}</td>
+        <td><input style="width:100%" value="${(wl[qq]||[]).join(',')}" onchange="updateWl('${qq}', this.value)"></td>
+        <td><button class="danger" style="padding:3px 10px" onclick="delWl('${qq}')">删</button></td>
+      </tr>`).join("");
+  } catch (e) {}
+}
+
+async function saveWl(next, admin) {
+  await api("/api/whitelist", { method: "POST", body: JSON.stringify({ whitelist: next, admin_qq: admin || "" }) });
+  renderWhitelist();
+}
+
+async function updateWl(qq, s) {
+  const d = await api("/api/whitelist");
+  const wl = d.whitelist || {};
+  wl[qq] = s.split(/[,，\s]+/).filter(Boolean);
+  await saveWl(wl, d.admin_qq);
+}
+
+async function delWl(qq) {
+  const d = await api("/api/whitelist");
+  const wl = d.whitelist || {};
+  delete wl[qq];
+  await saveWl(wl, d.admin_qq);
+}
+
+async function addWl() {
+  const qq = document.getElementById("wlQq").value.trim();
+  const sv = document.getElementById("wlSvr").value.trim();
+  if (!qq) return;
+  const d = await api("/api/whitelist");
+  const wl = d.whitelist || {};
+  wl[qq] = sv ? sv.split(/[,，\s]+/).filter(Boolean) : ["*"];
+  await saveWl(wl, d.admin_qq);
+  document.getElementById("wlQq").value = "";
+}
+
+async function renderLogs() {
+  try {
+    const d = await api("/api/logs?limit=80");
+    const logs = d.logs || [];
+    const el = document.getElementById("logs");
+    document.getElementById("logCount").textContent = "· " + logs.length + " 条";
+    if (!logs.length) { el.innerHTML = '<div class="tip">暂无日志</div>'; return; }
+    const fmt = t => {
+      const d = new Date(t * 1000);
+      return d.toLocaleTimeString("zh-CN", { hour12: false });
+    };
+    const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+    el.innerHTML = logs.slice().reverse().map(e => {
+      let txt = e.type;
+      if (e.type === "chat") txt = `${e.player} › ${e.msg}`;
+      else if (e.type === "join") txt = `${e.player} 加入游戏`;
+      else if (e.type === "leave") txt = `${e.player} 退出游戏`;
+      else if (e.type === "death") txt = `${e.player} 死亡: ${e.reason}`;
+      else if (e.type === "achievement") txt = `${e.player} 成就: ${e.title}`;
+      else if (e.type === "server_start") txt = `${e.server_name} 启动`;
+      else if (e.type === "server_stop") txt = `${e.server_name} 关闭`;
+      else if (e.type === "command") txt = `web 下发: ${e.server} /${e.cmd}`;
+      else if (e.type === "command_failed") txt = `下发失败: ${e.server} /${e.cmd} — ${e.reason}`;
+      return `<div class="log-line"><span class="t">${fmt(e.ts)}</span><span class="tag">[${e.type}]</span><span class="txt">${esc(txt)}</span></div>`;
+    }).join("");
+  } catch (e) {}
+}
+
+(async function init() {
+  if (token) {
+    try { await api("/api/status"); hideLogin(); refresh(); renderWhitelist(); renderLogs(); }
+    catch (e) { showLogin(); }
+  } else { showLogin(); }
+  setInterval(() => { refresh(); renderLogs(); renderWhitelist(); }, 3000);
+})();
+</script>
+</body>
+</html>

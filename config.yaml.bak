@@ -5,7 +5,7 @@ ws_host: "0.0.0.0"
 ws_port: 8765
 
 # 连接令牌：Mod 端环境变量 SRCON_TOKEN 必须与此一致
-token: "CHANGE_ME_TO_RANDOM_STRING"
+token: "6432cfb459b3ddd2b1986be48e4b04e4"
 
 # 全局管理员 QQ（可配置任何人的白名单）
 admin_qq: ""
@@ -13,7 +13,7 @@ admin_qq: ""
 # 白名单：QQ号 -> 可操作的服务器列表（"*" 表示全部服务器）
 # 不在列表中的 QQ 无法使用 srcon 命令
 whitelist:
-  "10001": ["*"]
+  "891584823": ["*"]
 
 # 事件转发：服务器ID -> 要转发到的群号列表
 # 游戏内聊天/进出服/死亡/成就事件会转发到这些群
@@ -37,8 +37,10 @@ forward_with_server_prefix: true
 # 聊天转发格式（可选变量：{server_name} {player} {msg}）
 chat_format: "{player} › {msg}"
 
-# ============ WebUI 管理面板 ============
+# ============ WebUI 管理面板（FastAPI）============
+# 浏览器访问 http://<Astrobot主机>:18766/ ，用下面的 webui_token 登录
+# 功能：服务器状态、命令执行、白名单管理、事件日志
 webui_enabled: true
 webui_host: "0.0.0.0"
 webui_port: 18766
-webui_token: "CHANGE_ME_TO_RANDOM_STRING"
+webui_token: "70f7c2f60f6a52281f0a03c9"

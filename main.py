@@ -6,6 +6,7 @@
 """
 import asyncio
 import logging
+import time
 from pathlib import Path
 
 from astrbot.api import AstrBotConfig
@@ -15,6 +16,7 @@ from astrbot.core.message.message_event_result import MessageChain
 from astrbot.core.star.filter.event_message_type import EventMessageType
 
 from .ws_server import SrconWSServer
+from .webui import SrconWebUI
 
 logger = logging.getLogger("astrbot.plugin.ptsrcon")
 
@@ -49,6 +51,21 @@ class SrconPlugin(Star):
         )
         self._session_cache: dict[str, str] = {}  # group_id -> unified_msg_origin
         self._task = None
+        self.started_at: float = time.time()
+        # WebUI 管理面板
+        self.webui = None
+        try:
+            if bool(_cfg(self.config, "webui_enabled", False) or False):
+                self.webui = SrconWebUI(
+                    host=str(_cfg(self.config, "webui_host", "0.0.0.0")),
+                    port=int(_cfg(self.config, "webui_port", 18766) or 18766),
+                    token=str(_cfg(self.config, "webui_token", "") or ""),
+                    plugin=self,
+                    static_dir=Path(__file__).parent / "webui",
+                    config_path=Path(__file__).parent / "config.yaml",
+                )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"[SRCon] WebUI 初始化失败: {exc}")
 
     # ──────────── 生命周期 ────────────
 
@@ -56,6 +73,10 @@ class SrconPlugin(Star):
         self._task = asyncio.create_task(self._ws_runner(), name="ptsrcon-ws-server")
         port = int(_cfg(self.config, "ws_port", 8765) or 8765)
         logger.info(f"[SRCon] 插件初始化完成，WebSocket 服务端监听 :{port}")
+        if self.webui:
+            self._webui_task = asyncio.create_task(self._run_webui(), name="ptsrcon-webui")
+            wport = int(_cfg(self.config, "webui_port", 18766) or 18766)
+            logger.info(f"[SRCon] WebUI 已启动: http://0.0.0.0:{wport}/")
 
     async def _ws_runner(self):
         try:
@@ -65,7 +86,26 @@ class SrconPlugin(Star):
         except Exception as exc:  # noqa: BLE001
             logger.error(f"[SRCon] WebSocket 服务端启动失败: {exc}")
 
+    async def _run_webui(self):
+        try:
+            await self.webui.run()
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            logger.error(f"[SRCon] WebUI 运行异常: {exc}")
+
     async def terminate(self):
+        if getattr(self, "_webui_task", None):
+            self._webui_task.cancel()
+            try:
+                await self._webui_task
+            except (asyncio.CancelledError, Exception):  # noqa: BLE001
+                pass
+        if self.webui:
+            try:
+                await self.webui.stop()
+            except Exception:  # noqa: BLE001
+                pass
         if self._task:
             self._task.cancel()
             try:

@@ -48,3 +48,21 @@ Mod → 插件（JSON）：
 {"type":"command","server":"s1","command":"say hi","ack_id":"..."}
 {"type":"command_ack","ack_id":"...","ok":true,"output":"..."}
 ```
+
+## WebUI 管理面板（可选）
+
+插件自带一个网页管理面板（aiohttp，无需额外依赖）：
+
+| 能力 | 说明 |
+|------|------|
+| 🖥️ 服务器状态 | 实时查看已连接服务器/在线状态 |
+| ⌨️ 命令执行 | 网页上直接选服务器下发命令 |
+| 👥 白名单管理 | 增删改查，写回 config.yaml 并热生效 |
+| 📜 事件日志 | 最近 300 条事件滚动查看 |
+
+### 使用
+1. `config.yaml` 设置 `webui_enabled: true`、`webui_port: 18766`、`webui_token: "自定义访问令牌"`
+2. 重启 AstrBot，日志出现 `[SRCon] WebUI 已启动`
+3. 浏览器访问 `http://<AstrBot主机IP>:18766/`，输入 webui_token 进入
+
+> 安全提示：`config.yaml` 已加入 .gitignore **不入库**（含真实 token），公开仓库只保留 `config.example.yaml` 占位模板。
